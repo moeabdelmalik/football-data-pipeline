@@ -1,0 +1,11 @@
+[tool.pytest.ini_options]
+pythonpath = ["src"]        # import elt.* without installing the package
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]   # pycodestyle, pyflakes, isort, pyupgrade, bugbear

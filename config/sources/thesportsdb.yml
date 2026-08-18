@@ -1,0 +1,64 @@
+# ---------------------------------------------------------------------------
+# TheSportsDB source definition.
+#
+# This file is the ONLY place a new league, season or endpoint is added.
+# No Python change is required to widen the extraction scope - which is what
+# "config-driven" means in practice, and what makes NFR-4 (backfill any
+# league x season independently) achievable from the command line.
+#
+# Secrets do NOT live here. The API key comes from the environment.
+# ---------------------------------------------------------------------------
+source: thesportsdb
+base_url: https://www.thesportsdb.com/api/v1/json
+
+# --- How we talk to the API ------------------------------------------------
+# Driven by CONSTRAINT-5: undocumented rate limits, no rate-limit headers.
+# We assume fragility - throttle ourselves, and back off when it complains.
+request:
+  timeout_seconds: 15.0          # a hung socket must not hang the DAG
+  min_interval_seconds: 1.5      # client-side throttle between calls
+  max_attempts: 5                # total attempts, not extra retries
+  backoff_initial_seconds: 1.0   # 1s, 2s, 4s, 8s ... exponential
+  backoff_max_seconds: 30.0      # ceiling on any single wait
+
+# --- What we pull ----------------------------------------------------------
+# grain controls the fan-out:
+#   league        -> one call per league          (5 calls)
+#   league_season -> one call per league x season (15 calls)
+endpoints:
+  teams:
+    path: lookup_all_teams.php
+    root_key: teams
+    grain: league
+    params:
+      id: "{league_id}"
+  events:
+    path: eventsseason.php
+    root_key: events
+    grain: league_season
+    params:
+      id: "{league_id}"
+      s: "{season}"
+
+# --- Scope (requirements.md section 3) -------------------------------------
+leagues:
+  - id: 4328
+    name: English Premier League
+    country: England
+  - id: 4331
+    name: German Bundesliga
+    country: Germany
+  - id: 4332
+    name: Italian Serie A
+    country: Italy
+  - id: 4334
+    name: French Ligue 1
+    country: France
+  - id: 4335
+    name: Spanish La Liga
+    country: Spain
+
+seasons:
+  - "2024-2025"   # final
+  - "2025-2026"   # final
+  - "2026-2027"   # in progress - mutates (CONSTRAINT-3)

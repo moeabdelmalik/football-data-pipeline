@@ -25,17 +25,25 @@ request:
 # grain controls the fan-out:
 #   league        -> one call per league          (5 calls)
 #   league_season -> one call per league x season (15 calls)
+#
+# primary_key is the source's natural key. It is what the load layer MERGEs on,
+# which is how a re-run updates a row instead of duplicating it (CONSTRAINT-3).
+# table is the raw BigQuery table the endpoint lands in.
 endpoints:
   teams:
     path: lookup_all_teams.php
     root_key: teams
     grain: league
+    primary_key: idTeam
+    table: tsdb_teams
     params:
       id: "{league_id}"
   events:
     path: eventsseason.php
     root_key: events
     grain: league_season
+    primary_key: idEvent
+    table: tsdb_events
     params:
       id: "{league_id}"
       s: "{season}"

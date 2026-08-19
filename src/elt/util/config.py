@@ -47,6 +47,8 @@ class Endpoint(BaseModel):
     path: str
     root_key: str
     grain: Literal["league", "league_season"]
+    primary_key: str          # source field the load layer MERGEs on
+    table: str                # target table in the raw dataset
     params: dict[str, str] = Field(default_factory=dict)
 
     @property
@@ -179,8 +181,10 @@ class Settings:
 
     api_key: str
     gcp_project_id: str | None
+    gcp_region: str
     gcs_raw_bucket: str | None
     local_raw_dir: Path
+    bq_dataset_raw: str
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -190,10 +194,12 @@ class Settings:
             # project runnable on a fresh clone with no credentials at all.
             api_key=os.getenv("TSDB_API_KEY", "3"),
             gcp_project_id=os.getenv("GCP_PROJECT_ID") or None,
+            gcp_region=os.getenv("GCP_REGION", "US"),
             gcs_raw_bucket=os.getenv("GCS_RAW_BUCKET") or None,
             # The object path already begins with "raw/", so this is the root
             # the bucket is being stood in for - keeping both layouts identical.
             local_raw_dir=Path(os.getenv("LOCAL_RAW_DIR", str(REPO_ROOT / "data"))),
+            bq_dataset_raw=os.getenv("BQ_DATASET_RAW", "sports_raw"),
         )
 
     @property

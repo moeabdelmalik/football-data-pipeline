@@ -12,7 +12,6 @@ from elt.extract.writer import (
     stamp_records,
     to_ndjson,
 )
-from elt.util.config import Settings
 
 
 def task(config, endpoint="events", league_index=0, season="2024-2025"):
@@ -121,8 +120,8 @@ def test_gcs_writer_uploads_ndjson_and_returns_a_gs_uri():
     assert json.loads(data.decode()) == {"idEvent": "1"}
 
 
-def test_build_writer_rejects_gcs_without_a_bucket(tmp_path):
-    settings = Settings(api_key="3", gcp_project_id=None, gcs_raw_bucket=None, local_raw_dir=tmp_path)
+def test_build_writer_rejects_gcs_without_a_bucket(make_settings):
+    settings = make_settings(gcs_raw_bucket=None)
     assert isinstance(build_writer("local", settings), LocalRawWriter)
     with pytest.raises(ValueError, match="GCS_RAW_BUCKET"):
         build_writer("gcs", settings)

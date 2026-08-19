@@ -12,8 +12,8 @@ models them into league standings and team form.
 | Requirements | ✅ [docs/requirements.md](docs/requirements.md) |
 | Architecture | ✅ [docs/architecture.md](docs/architecture.md) |
 | Extraction | ✅ Config-driven, retrying, rate-limited |
-| Load | 🔨 Next |
-| Transform (dbt) | ⬜ |
+| Load | ✅ GCS → BigQuery, MERGE-based |
+| Transform (dbt) | 🔨 Next |
 | Orchestration (Airflow) | ⬜ |
 
 ## What it does
@@ -60,8 +60,34 @@ raw/thesportsdb/events/ingest_date=2026-08-18/league_id=4328/season=2024-2025/da
 Same task, same ingest date, same path - so a re-run overwrites instead of
 accumulating. That is where idempotency (NFR-3) starts.
 
+## Loading to BigQuery
+
+Reads the files the extractor wrote and MERGEs them into the raw dataset.
+Requires GCP credentials.
+
 ```bash
-pytest        # 34 tests, no network required
+python -m elt.load.run --dry-run                 # list the files that would merge
+python -m elt.load.run --ingest-date 2026-08-18  # load one day's landing
+```
+
+The raw table keeps each record **whole**, in a single `payload` column,
+alongside its lineage:
+
+| column | |
+|---|---|
+| `record_key` | `idEvent` / `idTeam` — what the MERGE joins on |
+| `payload` | the JSON record exactly as received |
+| `source`, `endpoint`, `league_id`, `season` | lineage, stamped at extract time |
+| `ingested_at`, `ingest_date`, `loaded_at` | when it was fetched and loaded |
+
+A 69-field team record would otherwise mean 69 hand-maintained columns that
+break whenever the API adds a field. Here schema drift can't break the load —
+dbt picks fields out with `JSON_VALUE()` in staging, where a change is a
+one-line edit. Loads are `MERGE`, never `APPEND`, because the current season
+mutates in place (CONSTRAINT-3).
+
+```bash
+pytest        # 56 tests, no network or GCP account required
 ruff check .
 ```
 
